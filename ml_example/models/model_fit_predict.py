@@ -22,7 +22,7 @@ def train_model(
     elif train_params.model_type == "LinearRegression":
         model = LinearRegression()
     else:
-        raise NotImplemented()
+        raise NotImplementedError()
     model.fit(features, target)
     return model
 
