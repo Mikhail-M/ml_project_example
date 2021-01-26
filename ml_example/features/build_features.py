@@ -52,7 +52,7 @@ def make_features(
     params: FeatureParams,
     test_mode: bool = False,
 ) -> Tuple[pd.DataFrame, Optional[pd.Series]]:
-    ready_features_df = pd.DataFrame(transformer.transform(df))
+    ready_features_df = pd.DataFrame(transformer.transform(df).toarray())
     if test_mode:
         return ready_features_df, None
     else:
