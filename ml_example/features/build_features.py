@@ -3,34 +3,46 @@ from typing import Tuple, Optional, List
 import numpy as np
 import pandas as pd
 from sklearn.impute import SimpleImputer
+from sklearn.impute._base import _BaseImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
 
 from ml_example.enities.feature_params import FeatureParams
 
 
-def impute_features(df: pd.DataFrame, strategy: str) -> pd.DataFrame:
+def get_imputer(strategy: str) -> _BaseImputer:
     imputer = SimpleImputer(missing_values=np.nan, strategy=strategy)
-    features_transformed = imputer.fit_transform(df)
-    features_pandas = pd.DataFrame(
-        features_transformed, columns=df.columns, index=df.index,
-    )
-    return features_pandas
+    return imputer
 
 
-def impute_categorical_features(df: pd.DataFrame):
-    return impute_features(df, strategy="most_frequent")
+def get_categorical_imputer() -> _BaseImputer:
+    return get_imputer(strategy="most_frequent")
 
 
-def impute_numerical_features(df: pd.DataFrame):
-    return impute_features(df, strategy="mean")
+def get_numerical_imputer() -> _BaseImputer:
+    return get_imputer(strategy="mean")
 
 
 def process_categorical_features(categorical_df: pd.DataFrame) -> pd.DataFrame:
-    categorical_df = impute_categorical_features(categorical_df)
-    return pd.get_dummies(categorical_df, dummy_na=False)
+    pipeline = categorical_pipeline(categorical_df)
+    one_df = pd.DataFrame(
+        pipeline.transform(categorical_df).toarray(),
+        columns=pipeline["encoder"].get_feature_names(),
+    )
+    return one_df
 
 
-def process_numerical_features(numerical_df: pd.DataFrame) -> pd.DataFrame:
-    return impute_numerical_features(numerical_df)
+def categorical_pipeline(categorical_df) -> Pipeline:
+    imputer = get_categorical_imputer()
+    encoder = OneHotEncoder()
+    pipeline = Pipeline([("imputer", imputer), ("encoder", encoder)])
+    pipeline.fit(categorical_df)
+    return pipeline
+
+
+def numerical_pipeline() -> Pipeline:
+    imputer = get_numerical_imputer()
+    return Pipeline([("imputer", imputer)])
 
 
 def drop_features(
