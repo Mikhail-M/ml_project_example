@@ -4,7 +4,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ml_example.features.build_features import process_categorical_features
+from ml_example.features.build_features import (
+    process_categorical_features,
+    categorical_pipeline,
+)
 
 
 @pytest.fixture()
@@ -34,6 +37,10 @@ def test_process_categorical_features(
     categorical_feature: str,
     categorical_values: List[str],
 ):
-    transformed: pd.DataFrame = process_categorical_features(fake_categorical_data)
+    pipeline = categorical_pipeline()
+    pipeline.fit(fake_categorical_data)
+    transformed: pd.DataFrame = process_categorical_features(
+        pipeline, fake_categorical_data
+    )
     assert transformed.shape[1] == 3
     assert transformed.sum().sum() == 4

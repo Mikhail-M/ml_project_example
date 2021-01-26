@@ -1,7 +1,8 @@
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional
 
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.impute._base import _BaseImputer
 from sklearn.pipeline import Pipeline
@@ -23,8 +24,9 @@ def get_numerical_imputer() -> _BaseImputer:
     return get_imputer(strategy="mean")
 
 
-def process_categorical_features(categorical_df: pd.DataFrame) -> pd.DataFrame:
-    pipeline = categorical_pipeline(categorical_df)
+def process_categorical_features(
+    pipeline: Pipeline, categorical_df: pd.DataFrame
+) -> pd.DataFrame:
     one_df = pd.DataFrame(
         pipeline.transform(categorical_df).toarray(),
         columns=pipeline["encoder"].get_feature_names(),
@@ -32,11 +34,10 @@ def process_categorical_features(categorical_df: pd.DataFrame) -> pd.DataFrame:
     return one_df
 
 
-def categorical_pipeline(categorical_df) -> Pipeline:
+def categorical_pipeline() -> Pipeline:
     imputer = get_categorical_imputer()
     encoder = OneHotEncoder()
     pipeline = Pipeline([("imputer", imputer), ("encoder", encoder)])
-    pipeline.fit(categorical_df)
     return pipeline
 
 
@@ -45,41 +46,26 @@ def numerical_pipeline() -> Pipeline:
     return Pipeline([("imputer", imputer)])
 
 
-def drop_features(
-    df: pd.DataFrame, params: FeatureParams
-) -> Tuple[pd.DataFrame, List[str], List[str]]:
-    num_features = params.numerical_features.copy()
-    cat_features = params.categorical_features.copy()
-
-    df = df.drop(params.features_to_drop, axis=1)
-    for x in params.features_to_drop:
-        if x in num_features:
-            num_features.remove(x)
-        if x in cat_features:
-            cat_features.remove(x)
-    return df, cat_features, num_features
-
-
 def make_features(
     df: pd.DataFrame, params: FeatureParams, test_mode: bool = False
 ) -> Tuple[pd.DataFrame, Optional[pd.Series]]:
-    features = df[params.numerical_features + params.categorical_features]
-    features, categorical_features, numerical_features = drop_features(features, params)
-
-    categorical_features_df = features[categorical_features]
-    categorical_features_transformed = process_categorical_features(
-        categorical_features_df
+    transformer = ColumnTransformer(
+        [
+            ("categorical", categorical_pipeline(), params.categorical_features),
+            ("numerical", numerical_pipeline(), params.numerical_features),
+        ]
     )
-
-    numerical_features_df = process_numerical_features(features[numerical_features])
-
-    ready_features_df = pd.concat(
-        [categorical_features_transformed, numerical_features_df], axis=1
-    )
+    ready_features_df = pd.DataFrame(transformer.fit_transform(df))
     if test_mode:
         return ready_features_df, None
     else:
-        target = df[params.target_col]
-        if params.use_log_trick:
-            target = pd.Series(np.log(target.to_numpy()))
-        return ready_features_df, target
+        return extract_target(df, params, ready_features_df)
+
+
+def extract_target(
+    df: pd.DataFrame, params: FeatureParams, ready_features_df: pd.DataFrame,
+) -> Tuple[pd.DataFrame, pd.Series]:
+    target = df[params.target_col]
+    if params.use_log_trick:
+        target = pd.Series(np.log(target.to_numpy()))
+    return ready_features_df, target
