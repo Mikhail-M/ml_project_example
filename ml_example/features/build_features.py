@@ -47,19 +47,26 @@ def numerical_pipeline() -> Pipeline:
 
 
 def make_features(
-    df: pd.DataFrame, params: FeatureParams, test_mode: bool = False
+    transformer: ColumnTransformer,
+    df: pd.DataFrame,
+    params: FeatureParams,
+    test_mode: bool = False,
 ) -> Tuple[pd.DataFrame, Optional[pd.Series]]:
+    ready_features_df = pd.DataFrame(transformer.transform(df))
+    if test_mode:
+        return ready_features_df, None
+    else:
+        return extract_target(df, params, ready_features_df)
+
+
+def column_transformer(params) -> ColumnTransformer:
     transformer = ColumnTransformer(
         [
             ("categorical", categorical_pipeline(), params.categorical_features),
             ("numerical", numerical_pipeline(), params.numerical_features),
         ]
     )
-    ready_features_df = pd.DataFrame(transformer.fit_transform(df))
-    if test_mode:
-        return ready_features_df, None
-    else:
-        return extract_target(df, params, ready_features_df)
+    return transformer
 
 
 def extract_target(
