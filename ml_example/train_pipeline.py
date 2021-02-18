@@ -10,10 +10,10 @@ from ml_example.enities.train_pipeline_params import (
     read_training_pipeline_params,
 )
 from ml_example.features import make_features
-from ml_example.features.build_features import column_transformer
+from ml_example.features.build_features import column_transformer, extract_target
 from ml_example.models import (
     train_model,
-    serialize_model,
+    serialize_object,
     predict_model,
     evaluate_model,
 )
@@ -34,10 +34,14 @@ def train_pipeline(training_pipeline_params: TrainingPipelineParams):
     logger.info(f"train_df.shape is {train_df.shape}")
     logger.info(f"val_df.shape is {val_df.shape}")
 
+    train_df, train_target = extract_target(
+        train_df, training_pipeline_params.feature_params
+    )
+
     feature_transformer = column_transformer(training_pipeline_params.feature_params)
     feature_transformer.fit(train_df)
 
-    train_features, train_target = make_features(
+    train_features = make_features(
         feature_transformer,
         train_df,
         training_pipeline_params.feature_params,
@@ -49,8 +53,9 @@ def train_pipeline(training_pipeline_params: TrainingPipelineParams):
     model = train_model(
         train_features, train_target, training_pipeline_params.train_params
     )
+    val_df, val_target = extract_target(val_df, training_pipeline_params.feature_params)
 
-    val_features, val_target = make_features(
+    val_features = make_features(
         feature_transformer,
         val_df,
         training_pipeline_params.feature_params,
@@ -72,9 +77,12 @@ def train_pipeline(training_pipeline_params: TrainingPipelineParams):
         json.dump(metrics, metric_file)
     logger.info(f"metrics is {metrics}")
 
-    path_to_model = serialize_model(model, training_pipeline_params.output_model_path)
+    path_to_model = serialize_object(model, training_pipeline_params.output_model_path)
+    path_to_transformer = serialize_object(
+        feature_transformer, training_pipeline_params.output_transformer_path
+    )
 
-    return path_to_model, metrics
+    return path_to_model, path_to_transformer, metrics
 
 
 @click.command(name="train_pipeline")

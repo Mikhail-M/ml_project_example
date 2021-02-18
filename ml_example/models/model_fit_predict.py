@@ -48,7 +48,7 @@ def evaluate_model(
     }
 
 
-def serialize_model(model: SklearnRegressionModel, output: str) -> str:
+def serialize_object(model: object, output: str) -> str:
     with open(output, "wb") as f:
         pickle.dump(model, f)
     return output

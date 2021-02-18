@@ -1,4 +1,4 @@
-from typing import Tuple, Optional
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -51,12 +51,9 @@ def make_features(
     df: pd.DataFrame,
     params: FeatureParams,
     test_mode: bool = False,
-) -> Tuple[pd.DataFrame, Optional[pd.Series]]:
+) -> pd.DataFrame:
     ready_features_df = pd.DataFrame(transformer.transform(df).toarray())
-    if test_mode:
-        return ready_features_df, None
-    else:
-        return extract_target(df, params, ready_features_df)
+    return ready_features_df
 
 
 def column_transformer(params) -> ColumnTransformer:
@@ -70,9 +67,10 @@ def column_transformer(params) -> ColumnTransformer:
 
 
 def extract_target(
-    df: pd.DataFrame, params: FeatureParams, ready_features_df: pd.DataFrame,
+    df: pd.DataFrame, params: FeatureParams
 ) -> Tuple[pd.DataFrame, pd.Series]:
+    features = df.drop(params.target_col, 1)
     target = df[params.target_col]
     if params.use_log_trick:
         target = pd.Series(np.log(target.to_numpy()))
-    return ready_features_df, target
+    return features, target

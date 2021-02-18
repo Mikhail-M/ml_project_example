@@ -10,7 +10,7 @@ from sklearn.ensemble import RandomForestRegressor
 from ml_example.enities import TrainingParams
 from ml_example.enities.feature_params import FeatureParams
 from ml_example.features.build_features import make_features
-from ml_example.models.model_fit_predict import train_model, serialize_model
+from ml_example.models.model_fit_predict import train_model, serialize_object
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def test_serialize_model(tmpdir: LocalPath):
     expected_output = tmpdir.join("model.pkl")
     n_estimators = 10
     model = RandomForestRegressor(n_estimators=n_estimators)
-    real_output = serialize_model(model, expected_output)
+    real_output = serialize_object(model, expected_output)
     assert real_output == expected_output
     assert os.path.exists
     with open(real_output, "rb") as f:
